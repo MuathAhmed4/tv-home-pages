@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TV Home player</title>
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}#p{position:absolute;top:0;left:0;width:100%;height:100%}</style>
+</head>
+<body>
+<div id="p"></div>
+<script>
+  // Wrapper page for TV Home (webOS). Plays a YouTube video/live by id: yt.html?v=VIDEO_ID
+  var id = (location.search.match(/[?&]v=([\w-]+)/) || [])[1] || '';
+  var player, tag = document.createElement('script');
+  tag.src = 'https://www.youtube.com/iframe_api';
+  document.head.appendChild(tag);
+  function post(msg) { try { parent.postMessage(JSON.stringify(msg), '*'); } catch (e) {} }
+  function onYouTubeIframeAPIReady() {
+    player = new YT.Player('p', {
+      videoId: id, width: '100%', height: '100%',
+      playerVars: { autoplay: 1, controls: 0, rel: 0, modestbranding: 1, playsinline: 1, iv_load_policy: 3, fs: 0, disablekb: 1 },
+      events: {
+        onReady: function (e) { e.target.playVideo(); post({ tvhome: 'ready' }); },
+        onStateChange: function (e) { post({ tvhome: 'state', state: e.data }); if (e.data === YT.PlayerState.ENDED) e.target.playVideo(); },
+        onError: function (e) { post({ tvhome: 'error', code: e.data }); }
+      }
+    });
+  }
+  window.addEventListener('message', function (e) {
+    var d; try { d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; } catch (x) { return; }
+    if (!d || !player) return;
+    if (d.tvhome === 'play') player.playVideo();
+    if (d.tvhome === 'pause') player.pauseVideo();
+    if (d.tvhome === 'load' && d.v) player.loadVideoById(d.v);
+  });
+</script>
+</body>
+</html>
